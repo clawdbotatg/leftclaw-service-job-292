@@ -21,3 +21,8 @@ node_modules
 
 # cli
 dist
+.env
+.env.local
+ipfs-upload.config.json
+packages/nextjs/out
+packages/nextjs/.next

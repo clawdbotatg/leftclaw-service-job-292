@@ -1,73 +1,54 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Address } from "@scaffold-ui/components";
 import type { NextPage } from "next";
-import { useAccount } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { base } from "viem/chains";
+import deployedContracts from "~~/contracts/deployedContracts";
+
+const CHAIN_ID = 8453;
+const registryAddress = (deployedContracts as any)[CHAIN_ID]?.AchievementRegistry?.address;
+const badgeAddress = (deployedContracts as any)[CHAIN_ID]?.AchievementBadge?.address;
 
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
-  const { targetNetwork } = useTargetNetwork();
+  // <Address/> resolves ENS via wagmi, which requires a real WagmiProvider — not present
+  // during the static prerender pass. Mount-gate it the same way ScaffoldEthAppWithProviders does.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
-    <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-          </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address address={connectedAddress} chain={targetNetwork} />
+    <div className="flex items-center flex-col grow pt-10">
+      <div className="px-5 max-w-2xl text-center">
+        <h1 className="text-center">
+          <span className="block text-4xl font-bold">Clawd Achievements</span>
+          <span className="block text-lg mt-2 opacity-70">
+            Cross-app onchain achievement system — soulbound NFT badges on Base
+          </span>
+        </h1>
+
+        <p className="text-left text-base mt-8">
+          This project is a two-contract system deployed on Base mainnet: an owner-curated{" "}
+          <code className="italic bg-base-300 font-bold">AchievementRegistry</code> holding achievement definitions
+          (tier, supply cap, prerequisites, bundled rewards), and a soulbound{" "}
+          <code className="italic bg-base-300 font-bold">AchievementBadge</code> ERC-721 contract that mints badges on
+          presentation of an EIP-712-signed voucher from a trusted backend. See the repository README for the full
+          integration guide, ABI, and a TypeScript voucher-signing example.
+        </p>
+      </div>
+
+      <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
+        <div className="flex justify-center items-center gap-8 flex-col md:flex-row max-w-3xl mx-auto">
+          <div className="flex flex-col bg-base-100 border border-base-300 px-8 py-8 text-center items-center flex-1 gap-2">
+            <p className="font-semibold m-0">AchievementRegistry</p>
+            {mounted && registryAddress && <Address address={registryAddress} chain={base} />}
           </div>
-
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
-        </div>
-
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">
-            <div className="flex flex-col bg-base-100 border border-base-300 px-10 py-10 text-center items-center max-w-xs">
-              <BugAntIcon className="h-8 w-8" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 border border-base-300 px-10 py-10 text-center items-center max-w-xs">
-              <MagnifyingGlassIcon className="h-8 w-8" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
+          <div className="flex flex-col bg-base-100 border border-base-300 px-8 py-8 text-center items-center flex-1 gap-2">
+            <p className="font-semibold m-0">AchievementBadge</p>
+            {mounted && badgeAddress && <Address address={badgeAddress} chain={base} />}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
