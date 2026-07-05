@@ -1,85 +1,69 @@
-# 🏗 Scaffold-ETH 2
+# Clawd Achievements
+
+Cross-app onchain achievement system on Base — soulbound NFT badges, some with capped supply,
+some bundled with token rewards, claimed via EIP-712-signed vouchers so users pay no gas.
 
 **Live URL:** https://bafybeif2txaxsu46mtz74lr6gfy3p3czgiojlzxnje7a2tdchg6ly334qe.ipfs.community.bgipfs.com/
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+This job's scope is **contracts, tests, and Base mainnet deployment only** — the client builds
+and operates their own frontend (Hub, claim UI, admin panel) in their own stack. The frontend in
+this repo is intentionally minimal (project info + deployed contract addresses only, no
+claim/admin UI) to match that scope.
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+## Contracts (Base mainnet, chain id 8453)
 
-> [!NOTE]
-> 🤖 Scaffold-ETH 2 is AI-ready! It has everything agents need to build on Ethereum. Check `.agents/`, `.claude/`, `.opencode` or `.cursor/` for more info.
+| Contract | Address | Basescan |
+|---|---|---|
+| `AchievementRegistry` | [`0xE6731a953268EC0bDc73dF01C7d73Dd09C28207C`](https://basescan.org/address/0xE6731a953268EC0bDc73dF01C7d73Dd09C28207C#code) | Verified ✅ |
+| `AchievementBadge` | [`0x79350955160a24bE0FA18243Af6FA5F53CBEcCCa`](https://basescan.org/address/0x79350955160a24bE0FA18243Af6FA5F53CBEcCCa#code) | Verified ✅ |
 
-⚙️ Built using NextJS, RainbowKit, Foundry, Wagmi, Viem, and Typescript.
+Both are `Ownable2Step`, owned directly by the client wallet (`0xf2c44aF68aE2a983d1331b2D3aEF3c516Ae4a0Fc`) —
+set at construction, no `acceptOwnership()` call needed.
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+**→ See [`INTEGRATION.md`](./INTEGRATION.md) for the full integration guide: ABI surface, the exact
+EIP-712 typed-data structure, and a working TypeScript (viem) example of signing a voucher and
+submitting a claim transaction.**
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+## What each contract does
 
-## Requirements
+- **`AchievementRegistry`** — owner-curated catalogue of achievement definitions: appId, key,
+  name, description, tier (Common/Rare/Legendary), image URI, supply cap (optionally
+  permanently locked), bundled reward (ERC20 or native ETH), prerequisites (cross-app
+  meta-achievements), hidden flag, active flag. One registry serves unlimited apps.
+- **`AchievementBadge`** — strictly soulbound ERC-721. Mints on presentation of an EIP-712
+  voucher signed by a designated backend signer (owner-rotatable), with permanent replay
+  protection, supply-cap enforcement, prerequisite checks, and non-reverting bundled reward
+  payout. Fully on-chain, base64-encoded `tokenURI` — no offchain metadata server. Every state
+  change emits an event, so the client's own frontend can index everything via simple RPC reads,
+  no subgraph required.
 
-Before you begin, you need to install the following tools:
+## Immediate next step for the client
 
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
+Call `setVoucherSigner(<your backend's signer address>)` on `AchievementBadge` from the owner
+wallet. It's currently seeded to the deployer's address as a placeholder so no vouchers can be
+forged in the meantime — but no real vouchers will verify until you rotate it to your own key.
 
-## Quickstart
-
-To get started with Scaffold-ETH 2, follow the steps below:
-
-1. Install dependencies if it was skipped in CLI:
-
-```
-cd my-dapp-example
-yarn install
-```
-
-2. Run a local network in the first terminal:
-
-```
-yarn chain
-```
-
-This command starts a local Ethereum network using Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/foundry/foundry.toml`.
-
-3. On a second terminal, deploy the test contract:
+## Repository layout
 
 ```
-yarn deploy
+packages/
+  foundry/
+    contracts/               AchievementRegistry.sol, AchievementBadge.sol, interfaces/
+    script/DeployAchievements.s.sol
+    test/                    67 passing unit + fuzz tests
+  nextjs/                    minimal info page (see scope note above)
+INTEGRATION.md                full integration guide for the client's backend
+NEXT_STEPS.md                 known limitations / follow-up items
 ```
 
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script` to deploy the contract to the network. You can also customize the deploy script.
+## Local development
 
-4. On a third terminal, start your NextJS app:
-
+```bash
+cd packages/foundry
+forge build
+forge test --fuzz-runs 512
 ```
-yarn start
-```
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
-
-Run smart contract test with `yarn foundry:test`
-
-- Edit your smart contracts in `packages/foundry/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/foundry/script`
-
-
-## Documentation
-
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
-
-To know more about its features, check out our [website](https://scaffoldeth.io).
-
-## Contributing to Scaffold-ETH 2
-
-We welcome contributions to Scaffold-ETH 2!
-
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+To redeploy or modify: edit `packages/foundry/contracts/`, then `yarn deploy --network base`
+(reads `ALCHEMY_API_KEY` from a foundry keystore-based signer — see `packages/foundry/Makefile`).
+Never use a public RPC (`mainnet.base.org` etc.) for deployment or contract calls.
